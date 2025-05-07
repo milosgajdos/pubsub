@@ -1,19 +1,33 @@
+version: "2"
 linters:
   enable:
-    - staticcheck
-    - unconvert
-    - gofmt
-    - revive
-    - ineffassign
-    - govet
-    - unused
-    - misspell
     - bodyclose
-    - errcheck
-    - goimports
+    - misspell
     - prealloc
+    - revive
+    - unconvert
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+      - vendor$
 
-issues:
-  deadline: 2m
-  exlude-dirs:
-    - vendor
+run:
+  timeout: 5m
