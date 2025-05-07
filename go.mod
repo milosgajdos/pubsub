@@ -1,3 +1,3 @@
-module github.com/milosgajdos/go-repo-template
+module github.com/milosgajdos/pubsub
 
-go 1.22
+go 1.23
