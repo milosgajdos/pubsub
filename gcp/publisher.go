@@ -2,7 +2,6 @@ package gcp
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -25,7 +24,7 @@ type Publisher struct {
 // NewPublisher creates a new Google Cloud Pub/Sub publisher
 func NewPublisher(ctx context.Context, projectID string, options ...basepubsub.PubOption) (*Publisher, error) {
 	if projectID == "" {
-		return nil, errors.New("project ID cannot be empty")
+		return nil, ErrInvalidProject
 	}
 
 	opts := &basepubsub.PubOptions{}
@@ -41,7 +40,7 @@ func NewPublisher(ctx context.Context, projectID string, options ...basepubsub.P
 	}
 
 	if opts.Topic == "" {
-		return nil, errors.New("topic cannot be empty")
+		return nil, ErrInvalidTopic
 	}
 
 	// Create or get topic

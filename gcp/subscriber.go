@@ -2,7 +2,6 @@ package gcp
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -32,7 +31,7 @@ type Subscriber struct {
 // NewSubscriber creates a new Google Cloud Pub/Sub subscriber
 func NewSubscriber(ctx context.Context, projectID string, options ...basepubsub.SubOption) (*Subscriber, error) {
 	if projectID == "" {
-		return nil, errors.New("project ID cannot be empty")
+		return nil, ErrInvalidProject
 	}
 
 	opts := &basepubsub.SubOptions{}
@@ -41,7 +40,7 @@ func NewSubscriber(ctx context.Context, projectID string, options ...basepubsub.
 	}
 
 	if opts.Sub == "" {
-		return nil, errors.New("subscription ID cannot be empty")
+		return nil, ErrInvalidSubsciption
 	}
 
 	// Create a client with the retry configuration
@@ -83,7 +82,7 @@ func (s *Subscriber) Subscribe(ctx context.Context, handler basepubsub.MessageHa
 	s.mu.Lock()
 	if s.isSubscribed {
 		s.mu.Unlock()
-		return errors.New("already subscribed to the topic")
+		return ErrAlreadySubscribed
 	}
 	s.isSubscribed = true
 	s.mu.Unlock()
