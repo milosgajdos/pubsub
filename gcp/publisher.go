@@ -32,15 +32,15 @@ func NewPublisher(ctx context.Context, projectID string, options ...basepubsub.P
 		option(opts)
 	}
 
+	if opts.Topic == "" {
+		return nil, ErrInvalidTopic
+	}
+
 	// Create a client with the retry configuration
 	clientConfig := pubClientConfig(opts.Retry)
 	client, err := pubsub.NewClientWithConfig(ctx, projectID, clientConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create publisher pubsub client: %w", err)
-	}
-
-	if opts.Topic == "" {
-		return nil, ErrInvalidTopic
 	}
 
 	// Create or get topic
