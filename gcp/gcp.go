@@ -8,6 +8,9 @@ import (
 const (
 	DefaultInitRetryBackoff = 250 * time.Millisecond
 	DefaultMaxRetryBackoff  = 60 * time.Second
+
+	// DefaultMaxOutstandingMessages is the default maximum number of outstanding messages
+	DefaultMaxOutstandingMessages = 10
 )
 
 var (

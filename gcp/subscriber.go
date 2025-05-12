@@ -14,9 +14,6 @@ import (
 	basepubsub "github.com/milosgajdos/pubsub"
 )
 
-// DefaultMaxOutstandingMessages is the default maximum number of outstanding messages
-const DefaultMaxOutstandingMessages = 10
-
 // Subscriber implements the basepubsub.Subscriber interface for Google Cloud Pub/Sub
 type Subscriber struct {
 	projectID      string
