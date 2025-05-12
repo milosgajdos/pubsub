@@ -1,0 +1,52 @@
+package gcp
+
+import (
+	"cloud.google.com/go/pubsub"
+)
+
+// Message implements the pubsub.Message interface for Google Cloud Pub/Sub
+type Message struct {
+	msg      *pubsub.Message
+	metadata map[string]any
+}
+
+// NewMessage creates a new message from a Google Cloud Pub/Sub message
+func NewMessage(msg *pubsub.Message, metadata map[string]any) *Message {
+	return &Message{
+		msg:      msg,
+		metadata: metadata,
+	}
+}
+
+// ID returns the message ID
+func (m *Message) ID() string {
+	return m.msg.ID
+}
+
+// Data returns the message payload
+func (m *Message) Data() []byte {
+	return m.msg.Data
+}
+
+// Attributes returns the message attributes
+func (m *Message) Attributes() map[string]string {
+	return m.msg.Attributes
+}
+
+// Metadata returns the message metadata
+func (m *Message) Metadata() map[string]any {
+	if m.metadata == nil {
+		m.metadata = make(map[string]any)
+	}
+	return m.metadata
+}
+
+// Ack acknowledges the message
+func (m *Message) Ack() {
+	m.msg.Ack()
+}
+
+// Nack negatively acknowledges the message
+func (m *Message) Nack() {
+	m.msg.Nack()
+}
