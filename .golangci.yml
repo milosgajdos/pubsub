@@ -6,6 +6,7 @@ linters:
     - prealloc
     - revive
     - unconvert
+    - errcheck
   exclusions:
     generated: lax
     presets:
