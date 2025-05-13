@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	"cloud.google.com/go/pubsub"
-	"google.golang.org/grpc/codes"
-
 	vkit "cloud.google.com/go/pubsub/apiv1"
 	gax "github.com/googleapis/gax-go/v2"
 	basepubsub "github.com/milosgajdos/pubsub"
+
+	"cloud.google.com/go/pubsub"
+	"google.golang.org/grpc/codes"
 )
 
 // Publisher implements the basepubsub.Publisher interface for Google Cloud Pub/Sub

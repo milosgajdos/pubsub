@@ -52,7 +52,6 @@ func TestSubscriberIntegration(t *testing.T) {
 			receivedMessages = append(receivedMessages, msg)
 			messagesMutex.Unlock()
 
-			// Acknowledge the message
 			msg.Ack()
 			return nil
 		})
@@ -109,9 +108,7 @@ func TestSubscriberIntegration(t *testing.T) {
 			t.Errorf("Message %d has empty data", i)
 		}
 
-		if val, ok := msg.Attributes()["sequence"]; ok {
-			t.Logf("Received message with sequence %s: %s", val, string(msg.Data()))
-		} else {
+		if _, ok := msg.Attributes()["sequence"]; !ok {
 			t.Errorf("Message %d is missing sequence attribute", i)
 		}
 

@@ -6,12 +6,12 @@ import (
 	"sync"
 	"time"
 
-	"cloud.google.com/go/pubsub"
-	"google.golang.org/grpc/codes"
-
 	vkit "cloud.google.com/go/pubsub/apiv1"
 	gax "github.com/googleapis/gax-go/v2"
 	basepubsub "github.com/milosgajdos/pubsub"
+
+	"cloud.google.com/go/pubsub"
+	"google.golang.org/grpc/codes"
 )
 
 // Subscriber implements the basepubsub.Subscriber interface for Google Cloud Pub/Sub

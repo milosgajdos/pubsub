@@ -15,7 +15,6 @@ import (
 )
 
 func TestPublisherIntegration(t *testing.T) {
-	// Use a unique topic and subscription name for this test
 	pubTopicID := "pub-test-topic"
 	pubSubID := "pub-test-subscription"
 
@@ -45,7 +44,6 @@ func TestPublisherIntegration(t *testing.T) {
 
 	// Publish messages individually
 	for i := range numMessages {
-		// Create message directly using the pubsub package's data structures
 		pubsubMsg := &pubsub.Message{
 			Data: fmt.Appendf(nil, "test-publish-message-%d", i),
 			Attributes: map[string]string{
@@ -54,11 +52,8 @@ func TestPublisherIntegration(t *testing.T) {
 				"id":             uuid.New().String(),
 			},
 		}
-
-		// Create our message wrapper
 		message := gcp.NewMessage(pubsubMsg, nil)
 
-		// Publish the message
 		msgID, err := publisher.Publish(ctx, message)
 		if err != nil {
 			t.Fatalf("Failed to publish message: %v", err)
@@ -70,7 +65,6 @@ func TestPublisherIntegration(t *testing.T) {
 	// Also test batch publishing
 	batchMessages := make([]basepubsub.Message, numMessages)
 	for i := range numMessages {
-		// Create the underlying pubsub.Message
 		pubsubMsg := &pubsub.Message{
 			Data: fmt.Appendf(nil, "test-batch-message-%d", i),
 			Attributes: map[string]string{
@@ -79,8 +73,6 @@ func TestPublisherIntegration(t *testing.T) {
 				"id":         uuid.New().String(),
 			},
 		}
-
-		// Create our message wrapper
 		batchMessages[i] = gcp.NewMessage(pubsubMsg, nil)
 	}
 
@@ -107,7 +99,6 @@ func TestPublisherIntegration(t *testing.T) {
 		receivedMutex.Unlock()
 		msg.Ack()
 	})
-
 	if err != nil && err != context.Canceled && err != context.DeadlineExceeded {
 		t.Errorf("Error receiving messages: %v", err)
 	}

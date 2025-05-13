@@ -23,6 +23,9 @@ const (
 	// Environment variables for PubSub emulator configuration
 	EnvManualEmulator = "MANUAL_PUBSUB_EMULATOR" // Set to "true" to use a manually started emulator
 	EnvEmulatorHost   = "PUBSUB_EMULATOR_HOST"   // The emulator host:port (e.g., "localhost:8085")
+
+	// Default emulator host if not set
+	DefaultEmulatorHost = "localhost:8085"
 )
 
 // SetupPubSub creates and starts a GCP PubSub emulator container and sets up a topic and subscription.
@@ -44,7 +47,7 @@ func SetupPubSub(t *testing.T, topicID, subID string) (*pubsub.Client, *pubsub.T
 
 	// If manual emulator is requested but host not set, use default localhost
 	if useManualEmulator && emulatorHost == "" {
-		emulatorHost = "localhost:8085"
+		emulatorHost = DefaultEmulatorHost
 		t.Setenv(EnvEmulatorHost, emulatorHost)
 		t.Logf("Using manual emulator with default address: %s", emulatorHost)
 		t.Logf("MANUAL EMULATOR MODE: Make sure you've started the pubsub emulator with:")
