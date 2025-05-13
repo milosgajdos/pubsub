@@ -4,6 +4,8 @@ import (
 	"reflect"
 	"testing"
 
+	basepubsub "github.com/milosgajdos/pubsub"
+
 	"cloud.google.com/go/pubsub"
 )
 
@@ -18,7 +20,7 @@ func TestNewMessage(t *testing.T) {
 	metadata := map[string]any{"meta-key": "meta-value"}
 
 	// Create a new Message
-	msg := NewMessage(mockPubsubMsg, metadata)
+	msg := NewMessage(mockPubsubMsg, basepubsub.WithMetadata(metadata))
 
 	// Verify the message was created correctly
 	if msg == nil {

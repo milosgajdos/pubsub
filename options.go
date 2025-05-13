@@ -79,3 +79,19 @@ func WithConcurrency(concurrency int) SubOption {
 		o.Concurrency = concurrency
 	}
 }
+
+// MessageOptions is used for configuring messages
+type MessageOptions struct {
+	// Metadata is message metadata
+	Metadata map[string]any
+}
+
+// MessageOption is used for configuring messages
+type MessageOption func(*MessageOptions)
+
+// WithMetadata is used for setting message metadata
+func WithMetadata(metadata map[string]any) MessageOption {
+	return func(o *MessageOptions) {
+		o.Metadata = metadata
+	}
+}

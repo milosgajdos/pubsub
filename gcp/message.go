@@ -1,6 +1,8 @@
 package gcp
 
 import (
+	basepubsub "github.com/milosgajdos/pubsub"
+
 	"cloud.google.com/go/pubsub"
 )
 
@@ -11,10 +13,18 @@ type Message struct {
 }
 
 // NewMessage creates a new message from a Google Cloud Pub/Sub message
-func NewMessage(msg *pubsub.Message, metadata map[string]any) *Message {
+func NewMessage(msg *pubsub.Message, options ...basepubsub.MessageOption) *Message {
+	opts := &basepubsub.MessageOptions{}
+	for _, option := range options {
+		option(opts)
+	}
+	if opts.Metadata == nil {
+		opts.Metadata = make(map[string]any)
+	}
+
 	return &Message{
 		msg:      msg,
-		metadata: metadata,
+		metadata: opts.Metadata,
 	}
 }
 

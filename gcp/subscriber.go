@@ -94,7 +94,7 @@ func (s *Subscriber) Subscribe(ctx context.Context, handler basepubsub.MessageHa
 		}
 
 		// Create a message that implements the MessageAcker interface
-		message := NewMessage(msg, metadata)
+		message := NewMessage(msg, basepubsub.WithMetadata(metadata))
 
 		// Process the message with the provided handler
 		err := handler(ctx, message)

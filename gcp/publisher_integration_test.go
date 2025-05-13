@@ -52,7 +52,7 @@ func TestPublisherIntegration(t *testing.T) {
 				"id":             uuid.New().String(),
 			},
 		}
-		message := gcp.NewMessage(pubsubMsg, nil)
+		message := gcp.NewMessage(pubsubMsg)
 
 		msgID, err := publisher.Publish(ctx, message)
 		if err != nil {
@@ -73,7 +73,7 @@ func TestPublisherIntegration(t *testing.T) {
 				"id":         uuid.New().String(),
 			},
 		}
-		batchMessages[i] = gcp.NewMessage(pubsubMsg, nil)
+		batchMessages[i] = gcp.NewMessage(pubsubMsg)
 	}
 
 	batchIDs, err := publisher.PublishBatch(ctx, batchMessages)
