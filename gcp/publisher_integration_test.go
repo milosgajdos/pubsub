@@ -23,7 +23,7 @@ func TestPublisherIntegration(t *testing.T) {
 	defer cleanup()
 	defer client.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	// Create a publisher
@@ -38,104 +38,129 @@ func TestPublisherIntegration(t *testing.T) {
 	}
 	defer publisher.Close()
 
-	// Test data for publishing
+	// Define common variables for both subtests
 	numMessages := 5
-	publishedIDs := make([]string, numMessages)
-
-	// Publish messages individually
-	for i := range numMessages {
-		pubsubMsg := &pubsub.Message{
-			Data: fmt.Appendf(nil, "test-publish-message-%d", i),
-			Attributes: map[string]string{
-				"publisher-test": "true",
-				"sequence":       fmt.Sprintf("%d", i),
-				"id":             uuid.New().String(),
-			},
-		}
-		message := gcp.NewMessage(pubsubMsg)
-
-		msgID, err := publisher.Publish(ctx, message)
-		if err != nil {
-			t.Fatalf("Failed to publish message: %v", err)
-		}
-		publishedIDs[i] = msgID
-		t.Logf("Published message with ID: %s", msgID)
-	}
-
-	// Also test batch publishing
-	batchMessages := make([]basepubsub.Message, numMessages)
-	for i := range numMessages {
-		pubsubMsg := &pubsub.Message{
-			Data: fmt.Appendf(nil, "test-batch-message-%d", i),
-			Attributes: map[string]string{
-				"batch-test": "true",
-				"sequence":   fmt.Sprintf("%d", i),
-				"id":         uuid.New().String(),
-			},
-		}
-		batchMessages[i] = gcp.NewMessage(pubsubMsg)
-	}
-
-	batchIDs, err := publisher.PublishBatch(ctx, batchMessages)
-	if err != nil {
-		t.Fatalf("Failed to publish batch: %v", err)
-	}
-
-	for i, id := range batchIDs {
-		t.Logf("Published batch message %d with ID: %s", i, id)
-	}
-
-	// Setup receiving messages to verify publishing worked
 	var receivedMutex sync.Mutex
 	receivedMessages := make([]*pubsub.Message, 0, numMessages*2)
-	receiveCtx, receiveCancel := context.WithTimeout(ctx, 10*time.Second)
-	defer receiveCancel()
 
-	// Start receiving messages
-	t.Log("Starting to receive messages...")
-	err = sub.Receive(receiveCtx, func(_ context.Context, msg *pubsub.Message) {
+	// Setup message receiver function
+	receiveMessages := func(timeout time.Duration) []*pubsub.Message {
 		receivedMutex.Lock()
-		receivedMessages = append(receivedMessages, msg)
+		receivedMessages = make([]*pubsub.Message, 0, numMessages*2)
 		receivedMutex.Unlock()
-		msg.Ack()
+
+		receiveCtx, receiveCancel := context.WithTimeout(ctx, timeout)
+		defer receiveCancel()
+
+		// Start receiving messages
+		t.Log("Starting to receive messages...")
+		err = sub.Receive(receiveCtx, func(_ context.Context, msg *pubsub.Message) {
+			receivedMutex.Lock()
+			receivedMessages = append(receivedMessages, msg)
+			receivedMutex.Unlock()
+			msg.Ack()
+		})
+		if err != nil && err != context.Canceled && err != context.DeadlineExceeded {
+			t.Errorf("Error receiving messages: %v", err)
+		}
+
+		receivedMutex.Lock()
+		result := make([]*pubsub.Message, len(receivedMessages))
+		copy(result, receivedMessages)
+		receivedMutex.Unlock()
+
+		return result
+	}
+
+	// Run single message publishing subtest
+	t.Run("SinglePublish", func(t *testing.T) {
+		publishedIDs := make([]string, numMessages)
+
+		// Publish messages individually
+		for i := range numMessages {
+			pubsubMsg := &pubsub.Message{
+				Data: fmt.Appendf(nil, "test-publish-message-%d", i),
+				Attributes: map[string]string{
+					"publisher-test": "true",
+					"sequence":       fmt.Sprintf("%d", i),
+					"id":             uuid.New().String(),
+				},
+			}
+			message := gcp.NewMessage(pubsubMsg)
+
+			msgID, err := publisher.Publish(ctx, message)
+			if err != nil {
+				t.Fatalf("Failed to publish message: %v", err)
+			}
+			publishedIDs[i] = msgID
+			t.Logf("Published message with ID: %s", msgID)
+		}
+
+		// Receive and verify messages
+		messages := receiveMessages(10 * time.Second)
+
+		t.Logf("Received %d messages", len(messages))
+
+		// Count individual messages
+		individualCount := 0
+		for _, msg := range messages {
+			if _, ok := msg.Attributes["publisher-test"]; ok {
+				individualCount++
+				t.Logf("Received individual message: %s", string(msg.Data))
+			}
+		}
+
+		t.Logf("Received %d individual messages", individualCount)
+
+		if individualCount < numMessages {
+			t.Errorf("Expected %d individual messages, got %d", numMessages, individualCount)
+		}
 	})
-	if err != nil && err != context.Canceled && err != context.DeadlineExceeded {
-		t.Errorf("Error receiving messages: %v", err)
-	}
 
-	// Verify received messages
-	receivedMutex.Lock()
-	defer receivedMutex.Unlock()
-
-	t.Logf("Received %d messages", len(receivedMessages))
-
-	if len(receivedMessages) < numMessages {
-		t.Errorf("Expected at least %d messages, got %d", numMessages, len(receivedMessages))
-	}
-
-	// Count individual and batch messages
-	individualCount := 0
-	batchCount := 0
-
-	for _, msg := range receivedMessages {
-		if _, ok := msg.Attributes["publisher-test"]; ok {
-			individualCount++
-			t.Logf("Received individual message: %s", string(msg.Data))
+	// Run batch publishing subtest
+	t.Run("BatchPublish", func(t *testing.T) {
+		// Prepare batch messages
+		batchMessages := make([]basepubsub.Message, numMessages)
+		for i := range numMessages {
+			pubsubMsg := &pubsub.Message{
+				Data: fmt.Appendf(nil, "test-batch-message-%d", i),
+				Attributes: map[string]string{
+					"batch-test": "true",
+					"sequence":   fmt.Sprintf("%d", i),
+					"id":         uuid.New().String(),
+				},
+			}
+			batchMessages[i] = gcp.NewMessage(pubsubMsg)
 		}
 
-		if _, ok := msg.Attributes["batch-test"]; ok {
-			batchCount++
-			t.Logf("Received batch message: %s", string(msg.Data))
+		// Publish batch
+		batchIDs, err := publisher.PublishBatch(ctx, batchMessages)
+		if err != nil {
+			t.Fatalf("Failed to publish batch: %v", err)
 		}
-	}
 
-	t.Logf("Received %d individual messages and %d batch messages", individualCount, batchCount)
+		for i, id := range batchIDs {
+			t.Logf("Published batch message %d with ID: %s", i, id)
+		}
 
-	if individualCount < numMessages {
-		t.Errorf("Expected %d individual messages, got %d", numMessages, individualCount)
-	}
+		// Receive and verify messages
+		messages := receiveMessages(10 * time.Second)
 
-	if batchCount < numMessages {
-		t.Errorf("Expected %d batch messages, got %d", numMessages, batchCount)
-	}
+		t.Logf("Received %d messages", len(messages))
+
+		// Count batch messages
+		batchCount := 0
+		for _, msg := range messages {
+			if _, ok := msg.Attributes["batch-test"]; ok {
+				batchCount++
+				t.Logf("Received batch message: %s", string(msg.Data))
+			}
+		}
+
+		t.Logf("Received %d batch messages", batchCount)
+
+		if batchCount < numMessages {
+			t.Errorf("Expected %d batch messages, got %d", numMessages, batchCount)
+		}
+	})
 }
