@@ -1,12 +1,12 @@
 package gcp
 
 import (
-	basepubsub "github.com/milosgajdos/pubsub"
-
 	"cloud.google.com/go/pubsub"
+
+	basepubsub "github.com/milosgajdos/pubsub"
 )
 
-// Message implements the pubsub.Message interface for Google Cloud Pub/Sub
+// Message implements the pubsub.MessageAcker interface for GCP Cloud Pub/Sub
 type Message struct {
 	msg      *pubsub.Message
 	metadata map[string]any

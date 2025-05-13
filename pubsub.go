@@ -12,7 +12,8 @@ type Message interface {
 	Attributes() map[string]string
 }
 
-// MessageAcker is used for acking and nacking messages
+// MessageAcker is a message
+// that can be acked or nacked
 type MessageAcker interface {
 	Message
 	Ack()
@@ -26,6 +27,7 @@ type Publisher interface {
 }
 
 // MessageHandler processes incoming messages
+// The handler is responsible for acking or nacking messages
 type MessageHandler func(ctx context.Context, msg MessageAcker) error
 
 // Subscriber is responsible for consuming messages

@@ -6,12 +6,12 @@ import (
 	"sync"
 	"time"
 
+	"cloud.google.com/go/pubsub"
+	"google.golang.org/grpc/codes"
+
 	vkit "cloud.google.com/go/pubsub/apiv1"
 	gax "github.com/googleapis/gax-go/v2"
 	basepubsub "github.com/milosgajdos/pubsub"
-
-	"cloud.google.com/go/pubsub"
-	"google.golang.org/grpc/codes"
 )
 
 // Subscriber implements the basepubsub.Subscriber interface for Google Cloud Pub/Sub
@@ -21,7 +21,7 @@ type Subscriber struct {
 	isSubscribed   bool
 	client         *pubsub.Client
 	subscription   *pubsub.Subscription
-	opts           *pubsub.ReceiveSettings
+	settings       *pubsub.ReceiveSettings
 	mu             sync.Mutex
 }
 
@@ -51,7 +51,7 @@ func NewSubscriber(ctx context.Context, projectID string, options ...basepubsub.
 	subscription := client.Subscription(opts.Sub)
 
 	// Configure subscription settings based on options
-	receiveSettings := pubsub.ReceiveSettings{
+	receiveSettings := &pubsub.ReceiveSettings{
 		MaxOutstandingMessages: DefaultMaxOutstandingMessages,
 	}
 
@@ -62,14 +62,14 @@ func NewSubscriber(ctx context.Context, projectID string, options ...basepubsub.
 		receiveSettings.MaxOutstandingMessages = 2 * opts.Concurrency
 	}
 
-	subscription.ReceiveSettings = receiveSettings
+	subscription.ReceiveSettings = *receiveSettings
 
 	return &Subscriber{
 		projectID:      projectID,
 		subscriptionID: opts.Sub,
 		client:         client,
 		subscription:   subscription,
-		opts:           &receiveSettings,
+		settings:       receiveSettings,
 	}, nil
 }
 
@@ -107,6 +107,10 @@ func (s *Subscriber) Subscribe(ctx context.Context, handler basepubsub.MessageHa
 		// If handler succeeds without error, we expect it to have called
 		// message.Ack() explicitly. If it didn't, the message will be redelivered
 		// when the ack deadline expires.
+		// This isnt the ideal design, but it's the choice made. The alternative
+		// is either to have an ack deadline or to ack the message in receive which
+		// might lead to double-acking of the same message which may have been acked
+		// in the handler.
 	})
 }
 

@@ -42,8 +42,10 @@ func WithPubRetry(retry Retry) PubOption {
 
 // Retry is used for retry settings
 type Retry struct {
+	// InitBackoffSeconds is initial backoff in seconds
 	InitBackoffSeconds int
-	MaxBackoffSeconds  int
+	// MaxBackoffSeconds is maximum backoff in seconds
+	MaxBackoffSeconds int
 }
 
 // SubOptions is used for configuring subscribers

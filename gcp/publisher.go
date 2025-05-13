@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"time"
 
+	"cloud.google.com/go/pubsub"
+	"google.golang.org/grpc/codes"
+
 	vkit "cloud.google.com/go/pubsub/apiv1"
 	gax "github.com/googleapis/gax-go/v2"
 	basepubsub "github.com/milosgajdos/pubsub"
-
-	"cloud.google.com/go/pubsub"
-	"google.golang.org/grpc/codes"
 )
 
 // Publisher implements the basepubsub.Publisher interface for Google Cloud Pub/Sub
@@ -18,7 +18,7 @@ type Publisher struct {
 	projectID string
 	client    *pubsub.Client
 	topic     *pubsub.Topic
-	opts      *pubsub.PublishSettings
+	settings  *pubsub.PublishSettings
 }
 
 // NewPublisher creates a new Google Cloud Pub/Sub publisher
@@ -59,7 +59,7 @@ func NewPublisher(ctx context.Context, projectID string, options ...basepubsub.P
 		projectID: projectID,
 		client:    client,
 		topic:     topic,
-		opts:      publishSettings,
+		settings:  publishSettings,
 	}, nil
 }
 

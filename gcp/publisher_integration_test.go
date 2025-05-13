@@ -7,10 +7,11 @@ import (
 	"testing"
 	"time"
 
-	basepubsub "github.com/milosgajdos/pubsub"
-
 	"cloud.google.com/go/pubsub"
 	"github.com/google/uuid"
+
+	basepubsub "github.com/milosgajdos/pubsub"
+
 	"github.com/milosgajdos/pubsub/gcp"
 )
 

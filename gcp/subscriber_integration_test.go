@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	basepubsub "github.com/milosgajdos/pubsub"
-
 	"cloud.google.com/go/pubsub"
 	"github.com/milosgajdos/pubsub/gcp"
+
+	basepubsub "github.com/milosgajdos/pubsub"
 )
 
 func TestSubscriberIntegration(t *testing.T) {
