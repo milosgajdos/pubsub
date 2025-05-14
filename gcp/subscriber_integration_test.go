@@ -15,13 +15,11 @@ import (
 )
 
 func TestSubscriberIntegration(t *testing.T) {
-	// Set up the emulator, topic, and subscription
 	client, topic, _, cleanup := gcp.SetupPubSub(t, gcp.TestTopicID, gcp.TestSubscriptionID)
 	defer cleanup()
 	defer client.Close()
 
 	t.Run("BasicSubscription", func(t *testing.T) {
-		// Setup context with timeout
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()
 
@@ -126,16 +124,15 @@ func TestSubscriberIntegration(t *testing.T) {
 	})
 
 	t.Run("ConcurrentSubscription", func(t *testing.T) {
-		// Setup context with timeout
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()
 
-		// Create a new subscriber for concurrent test with higher concurrency
+		// Create a new subscriber for concurrent test with higher concurrency (5)
 		subscriber, err := gcp.NewSubscriber(
 			ctx,
 			gcp.TestProjectID,
 			basepubsub.WithSub(gcp.TestSubscriptionID),
-			basepubsub.WithConcurrency(5), // Higher concurrency for this test
+			basepubsub.WithConcurrency(5),
 		)
 		if err != nil {
 			t.Fatalf("Failed to create concurrent subscriber: %v", err)
@@ -157,16 +154,12 @@ func TestSubscriberIntegration(t *testing.T) {
 			defer wg.Done()
 
 			err := subscriber.Subscribe(subCtx, func(_ context.Context, msg basepubsub.MessageAcker) error {
-				// Process message
 				t.Logf("Concurrent processing message: %s", string(msg.Data()))
-
 				// Simulate processing time to test concurrency
 				time.Sleep(200 * time.Millisecond)
-
 				// Update received count
 				receivedCount.Add(1)
 
-				// Acknowledge the message
 				msg.Ack()
 				return nil
 			})
@@ -207,6 +200,7 @@ func TestSubscriberIntegration(t *testing.T) {
 		count := receivedCount.Load()
 
 		t.Logf("Received %d concurrent messages", count)
+
 		if int(count) < batchSize {
 			t.Errorf("Expected to receive at least %d concurrent messages, got %d", batchSize, count)
 		}

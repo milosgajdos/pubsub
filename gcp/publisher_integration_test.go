@@ -44,7 +44,7 @@ func TestPublisherIntegration(t *testing.T) {
 	var receivedMutex sync.Mutex
 	receivedMessages := make([]*pubsub.Message, 0, numMessages*2)
 
-	// Setup message receiver function
+	// Receive message setup
 	receiveMessages := func(timeout time.Duration) []*pubsub.Message {
 		receivedMutex.Lock()
 		receivedMessages = make([]*pubsub.Message, 0, numMessages*2)
