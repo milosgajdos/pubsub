@@ -18,7 +18,7 @@ type Publisher struct {
 	projectID string
 	client    *pubsub.Client
 	topic     *pubsub.Topic
-	opts      *pubsub.PublishSettings
+	settings  *pubsub.PublishSettings
 }
 
 // NewPublisher creates a new Google Cloud Pub/Sub publisher
@@ -59,7 +59,7 @@ func NewPublisher(ctx context.Context, projectID string, options ...basepubsub.P
 		projectID: projectID,
 		client:    client,
 		topic:     topic,
-		opts:      publishSettings,
+		settings:  publishSettings,
 	}, nil
 }
 

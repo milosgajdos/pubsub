@@ -42,8 +42,10 @@ func WithPubRetry(retry Retry) PubOption {
 
 // Retry is used for retry settings
 type Retry struct {
+	// InitBackoffSeconds is initial backoff in seconds
 	InitBackoffSeconds int
-	MaxBackoffSeconds  int
+	// MaxBackoffSeconds is maximum backoff in seconds
+	MaxBackoffSeconds int
 }
 
 // SubOptions is used for configuring subscribers
@@ -77,5 +79,21 @@ func WithSubRetry(retry Retry) SubOption {
 func WithConcurrency(concurrency int) SubOption {
 	return func(o *SubOptions) {
 		o.Concurrency = concurrency
+	}
+}
+
+// MessageOptions is used for configuring messages
+type MessageOptions struct {
+	// Metadata is message metadata
+	Metadata map[string]any
+}
+
+// MessageOption is used for configuring messages
+type MessageOption func(*MessageOptions)
+
+// WithMetadata is used for setting message metadata
+func WithMetadata(metadata map[string]any) MessageOption {
+	return func(o *MessageOptions) {
+		o.Metadata = metadata
 	}
 }

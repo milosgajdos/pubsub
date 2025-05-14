@@ -21,7 +21,7 @@ type Subscriber struct {
 	isSubscribed   bool
 	client         *pubsub.Client
 	subscription   *pubsub.Subscription
-	opts           *pubsub.ReceiveSettings
+	settings       *pubsub.ReceiveSettings
 	mu             sync.Mutex
 }
 
@@ -51,7 +51,7 @@ func NewSubscriber(ctx context.Context, projectID string, options ...basepubsub.
 	subscription := client.Subscription(opts.Sub)
 
 	// Configure subscription settings based on options
-	receiveSettings := pubsub.ReceiveSettings{
+	receiveSettings := &pubsub.ReceiveSettings{
 		MaxOutstandingMessages: DefaultMaxOutstandingMessages,
 	}
 
@@ -62,14 +62,14 @@ func NewSubscriber(ctx context.Context, projectID string, options ...basepubsub.
 		receiveSettings.MaxOutstandingMessages = 2 * opts.Concurrency
 	}
 
-	subscription.ReceiveSettings = receiveSettings
+	subscription.ReceiveSettings = *receiveSettings
 
 	return &Subscriber{
 		projectID:      projectID,
 		subscriptionID: opts.Sub,
 		client:         client,
 		subscription:   subscription,
-		opts:           &receiveSettings,
+		settings:       receiveSettings,
 	}, nil
 }
 
@@ -94,7 +94,7 @@ func (s *Subscriber) Subscribe(ctx context.Context, handler basepubsub.MessageHa
 		}
 
 		// Create a message that implements the MessageAcker interface
-		message := NewMessage(msg, metadata)
+		message := NewMessage(msg, basepubsub.WithMetadata(metadata))
 
 		// Process the message with the provided handler
 		err := handler(ctx, message)
@@ -107,6 +107,10 @@ func (s *Subscriber) Subscribe(ctx context.Context, handler basepubsub.MessageHa
 		// If handler succeeds without error, we expect it to have called
 		// message.Ack() explicitly. If it didn't, the message will be redelivered
 		// when the ack deadline expires.
+		// This isnt the ideal design, but it's the choice made. The alternative
+		// is either to have an ack deadline or to ack the message in receive which
+		// might lead to double-acking of the same message which may have been acked
+		// in the handler.
 	})
 }
 
