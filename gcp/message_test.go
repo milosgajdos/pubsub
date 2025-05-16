@@ -86,7 +86,7 @@ func TestMessage(t *testing.T) {
 			}
 
 			if len(metadata) != 0 {
-				t.Errorf("Nely initialized metadata should be empty, got %v", metadata)
+				t.Errorf("Newly initialized metadata should be empty, got %v", metadata)
 			}
 		})
 	})
