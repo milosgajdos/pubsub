@@ -28,7 +28,7 @@ func TestNeMessage(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(msg.metadata, metadata) {
-		t.Errorf("Message metadata does not match expected: got %v, ant %v", msg.metadata, metadata)
+		t.Errorf("Message metadata does not match expected: got %v, want %v", msg.metadata, metadata)
 	}
 }
 
