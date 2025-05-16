@@ -11,7 +11,7 @@ import (
 // Handler is a type-safe handler for a specific message type.
 type Handler[T any] func(ctx context.Context, data T) error
 
-// RegisterTyped registers a type-safe handler for a specific message type
+// Register registers a type-safe handler for a specific message type
 func Register[T any](p pubsub.MessageProcessor, msgType pubsub.MessageType, handler Handler[T]) error {
 	// Create a wrapper handler that:
 	// 1. Unmarshals the message data into type T
