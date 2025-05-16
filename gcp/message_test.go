@@ -82,7 +82,7 @@ func TestMessage(t *testing.T) {
 			metadata := msg.Metadata()
 
 			if metadata == nil {
-				t.Error("Metadata() should initialize a ne map when metadata is nil")
+				t.Error("Metadata() should initialize a new map when metadata is nil")
 			}
 
 			if len(metadata) != 0 {
