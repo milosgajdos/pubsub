@@ -97,3 +97,28 @@ func WithMetadata(metadata map[string]any) MessageOption {
 		o.Metadata = metadata
 	}
 }
+
+// ProcessorOptions is used for configuring processors
+type ProcessorOptions struct {
+	// Unmarshaler is used for unmarshaling messages
+	Unmarshaler MessageUnmarshaler
+	// Extractor is used for extracting message type
+	Extractor MessageTypeExtractor
+}
+
+// ProcessorOption is used for configuring processors
+type ProcessorOption func(*ProcessorOptions)
+
+// WithUnmarshaler sets the unmarshaler for the processor
+func WithUnmarshaler(unmarshaler MessageUnmarshaler) ProcessorOption {
+	return func(p *ProcessorOptions) {
+		p.Unmarshaler = unmarshaler
+	}
+}
+
+// WithExtractor sets the extractor for the processor
+func WithExtractor(extractor MessageTypeExtractor) ProcessorOption {
+	return func(p *ProcessorOptions) {
+		p.Extractor = extractor
+	}
+}

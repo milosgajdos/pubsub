@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"cloud.google.com/go/pubsub"
-	"github.com/milosgajdos/pubsub/gcp"
+	gps "cloud.google.com/go/pubsub"
 
-	basepubsub "github.com/milosgajdos/pubsub"
+	"github.com/milosgajdos/pubsub"
+	"github.com/milosgajdos/pubsub/gcp"
 )
 
 func TestSubscriberIntegration(t *testing.T) {
@@ -27,8 +27,8 @@ func TestSubscriberIntegration(t *testing.T) {
 		subscriber, err := gcp.NewSubscriber(
 			ctx,
 			gcp.TestProjectID,
-			basepubsub.WithSub(gcp.TestSubscriptionID),
-			basepubsub.WithConcurrency(2),
+			pubsub.WithSub(gcp.TestSubscriptionID),
+			pubsub.WithConcurrency(2),
 		)
 		if err != nil {
 			t.Fatalf("Failed to create subscriber: %v", err)
@@ -37,7 +37,7 @@ func TestSubscriberIntegration(t *testing.T) {
 
 		// Setup message reception
 		var wg sync.WaitGroup
-		receivedMessages := make([]basepubsub.MessageAcker, 0)
+		receivedMessages := make([]pubsub.MessageAcker, 0)
 		messagesMutex := &sync.Mutex{}
 
 		// Start receiving messages
@@ -48,7 +48,7 @@ func TestSubscriberIntegration(t *testing.T) {
 			subCtx, subCancel := context.WithTimeout(ctx, 10*time.Second)
 			defer subCancel()
 
-			err := subscriber.Subscribe(subCtx, func(_ context.Context, msg basepubsub.MessageAcker) error {
+			err := subscriber.Subscribe(subCtx, func(_ context.Context, msg pubsub.MessageAcker) error {
 				messagesMutex.Lock()
 				receivedMessages = append(receivedMessages, msg)
 				messagesMutex.Unlock()
@@ -70,7 +70,7 @@ func TestSubscriberIntegration(t *testing.T) {
 			messageData := fmt.Appendf(nil, "test-message-%d", i)
 			messageAttrs := map[string]string{"sequence": fmt.Sprintf("%d", i)}
 
-			result := topic.Publish(ctx, &pubsub.Message{
+			result := topic.Publish(ctx, &gps.Message{
 				Data:       messageData,
 				Attributes: messageAttrs,
 			})
@@ -131,8 +131,8 @@ func TestSubscriberIntegration(t *testing.T) {
 		subscriber, err := gcp.NewSubscriber(
 			ctx,
 			gcp.TestProjectID,
-			basepubsub.WithSub(gcp.TestSubscriptionID),
-			basepubsub.WithConcurrency(5),
+			pubsub.WithSub(gcp.TestSubscriptionID),
+			pubsub.WithConcurrency(5),
 		)
 		if err != nil {
 			t.Fatalf("Failed to create concurrent subscriber: %v", err)
@@ -153,7 +153,7 @@ func TestSubscriberIntegration(t *testing.T) {
 		go func() {
 			defer wg.Done()
 
-			err := subscriber.Subscribe(subCtx, func(_ context.Context, msg basepubsub.MessageAcker) error {
+			err := subscriber.Subscribe(subCtx, func(_ context.Context, msg pubsub.MessageAcker) error {
 				t.Logf("Concurrent processing message: %s", string(msg.Data()))
 				// Simulate processing time to test concurrency
 				time.Sleep(200 * time.Millisecond)
@@ -173,7 +173,7 @@ func TestSubscriberIntegration(t *testing.T) {
 		batchSize := 10
 		for i := range batchSize {
 			messageData := fmt.Appendf(nil, "concurrent-msg-%d", i)
-			result := topic.Publish(ctx, &pubsub.Message{
+			result := topic.Publish(ctx, &gps.Message{
 				Data: messageData,
 				Attributes: map[string]string{
 					"test": "concurrent",

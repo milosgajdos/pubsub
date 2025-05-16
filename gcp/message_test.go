@@ -4,13 +4,13 @@ import (
 	"reflect"
 	"testing"
 
-	"cloud.google.com/go/pubsub"
+	gps "cloud.google.com/go/pubsub"
 
-	basepubsub "github.com/milosgajdos/pubsub"
+	"github.com/milosgajdos/pubsub"
 )
 
-func TestNewMessage(t *testing.T) {
-	mockPubsubMsg := &pubsub.Message{
+func TestNeMessage(t *testing.T) {
+	mockPubsubMsg := &gps.Message{
 		ID:         "test-id",
 		Data:       []byte("test-data"),
 		Attributes: map[string]string{"key": "value"},
@@ -18,9 +18,9 @@ func TestNewMessage(t *testing.T) {
 
 	metadata := map[string]any{"meta-key": "meta-value"}
 
-	msg := NewMessage(mockPubsubMsg, basepubsub.WithMetadata(metadata))
+	msg := NewMessage(mockPubsubMsg, pubsub.WithMetadata(metadata))
 	if msg == nil {
-		t.Fatal("NewMessage returned nil")
+		t.Fatal("NeMessage returned nil")
 	}
 
 	if !reflect.DeepEqual(msg.msg, mockPubsubMsg) {
@@ -28,28 +28,28 @@ func TestNewMessage(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(msg.metadata, metadata) {
-		t.Errorf("Message metadata does not match expected: got %v, want %v", msg.metadata, metadata)
+		t.Errorf("Message metadata does not match expected: got %v, ant %v", msg.metadata, metadata)
 	}
 }
 
 func TestMessage(t *testing.T) {
 	t.Run("ID", func(t *testing.T) {
 		expectedID := "test-message-id"
-		mockPubsubMsg := &pubsub.Message{ID: expectedID}
+		mockPubsubMsg := &gps.Message{ID: expectedID}
 		msg := &Message{msg: mockPubsubMsg}
 
 		if id := msg.ID(); id != expectedID {
-			t.Errorf("ID() = %v, want %v", id, expectedID)
+			t.Errorf("ID() = %v, ant %v", id, expectedID)
 		}
 	})
 
 	t.Run("Data", func(t *testing.T) {
 		expectedData := []byte("test message data")
-		mockPubsubMsg := &pubsub.Message{Data: expectedData}
+		mockPubsubMsg := &gps.Message{Data: expectedData}
 		msg := &Message{msg: mockPubsubMsg}
 
 		if data := msg.Data(); !reflect.DeepEqual(data, expectedData) {
-			t.Errorf("Data() = %v, want %v", data, expectedData)
+			t.Errorf("Data() = %v, ant %v", data, expectedData)
 		}
 	})
 
@@ -58,11 +58,11 @@ func TestMessage(t *testing.T) {
 			"attr1": "value1",
 			"attr2": "value2",
 		}
-		mockPubsubMsg := &pubsub.Message{Attributes: expectedAttrs}
+		mockPubsubMsg := &gps.Message{Attributes: expectedAttrs}
 		msg := &Message{msg: mockPubsubMsg}
 
 		if attrs := msg.Attributes(); !reflect.DeepEqual(attrs, expectedAttrs) {
-			t.Errorf("Attributes() = %v, want %v", attrs, expectedAttrs)
+			t.Errorf("Attributes() = %v, ant %v", attrs, expectedAttrs)
 		}
 	})
 
@@ -72,21 +72,21 @@ func TestMessage(t *testing.T) {
 			msg := &Message{metadata: existingMetadata}
 
 			if metadata := msg.Metadata(); !reflect.DeepEqual(metadata, existingMetadata) {
-				t.Errorf("Metadata() = %v, want %v", metadata, existingMetadata)
+				t.Errorf("Metadata() = %v, ant %v", metadata, existingMetadata)
 			}
 		})
 
 		t.Run("NilMetadata", func(t *testing.T) {
-			// Test with nil metadata (should initialize a new map)
+			// Test ith nil metadata (should initialize a new map)
 			msg := &Message{metadata: nil}
 			metadata := msg.Metadata()
 
 			if metadata == nil {
-				t.Error("Metadata() should initialize a new map when metadata is nil")
+				t.Error("Metadata() should initialize a ne map when metadata is nil")
 			}
 
 			if len(metadata) != 0 {
-				t.Errorf("Newly initialized metadata should be empty, got %v", metadata)
+				t.Errorf("Nely initialized metadata should be empty, got %v", metadata)
 			}
 		})
 	})

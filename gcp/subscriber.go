@@ -6,32 +6,33 @@ import (
 	"sync"
 	"time"
 
-	"cloud.google.com/go/pubsub"
 	"google.golang.org/grpc/codes"
 
+	gps "cloud.google.com/go/pubsub"
 	vkit "cloud.google.com/go/pubsub/apiv1"
 	gax "github.com/googleapis/gax-go/v2"
-	basepubsub "github.com/milosgajdos/pubsub"
+
+	"github.com/milosgajdos/pubsub"
 )
 
-// Subscriber implements the basepubsub.Subscriber interface for Google Cloud Pub/Sub
+// Subscriber implements the pubsub.Subscriber interface for Google Cloud Pub/Sub
 type Subscriber struct {
 	projectID      string
 	subscriptionID string
 	isSubscribed   bool
-	client         *pubsub.Client
-	subscription   *pubsub.Subscription
-	settings       *pubsub.ReceiveSettings
+	client         *gps.Client
+	subscription   *gps.Subscription
+	settings       *gps.ReceiveSettings
 	mu             sync.Mutex
 }
 
 // NewSubscriber creates a new Google Cloud Pub/Sub subscriber
-func NewSubscriber(ctx context.Context, projectID string, options ...basepubsub.SubOption) (*Subscriber, error) {
+func NewSubscriber(ctx context.Context, projectID string, options ...pubsub.SubOption) (*Subscriber, error) {
 	if projectID == "" {
 		return nil, ErrInvalidProject
 	}
 
-	opts := &basepubsub.SubOptions{}
+	opts := &pubsub.SubOptions{}
 	for _, option := range options {
 		option(opts)
 	}
@@ -42,7 +43,7 @@ func NewSubscriber(ctx context.Context, projectID string, options ...basepubsub.
 
 	// Create a client with the retry configuration
 	clientConfig := subClientConfig(opts.Retry)
-	client, err := pubsub.NewClientWithConfig(ctx, projectID, clientConfig)
+	client, err := gps.NewClientWithConfig(ctx, projectID, clientConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create subscriber pubsub client: %w", err)
 	}
@@ -51,7 +52,7 @@ func NewSubscriber(ctx context.Context, projectID string, options ...basepubsub.
 	subscription := client.Subscription(opts.Sub)
 
 	// Configure subscription settings based on options
-	receiveSettings := &pubsub.ReceiveSettings{
+	receiveSettings := &gps.ReceiveSettings{
 		MaxOutstandingMessages: DefaultMaxOutstandingMessages,
 	}
 
@@ -75,7 +76,7 @@ func NewSubscriber(ctx context.Context, projectID string, options ...basepubsub.
 
 // Subscribe starts consuming messages from the subscription
 // Subscribe is a blocking call intended to run in a goroutine
-func (s *Subscriber) Subscribe(ctx context.Context, handler basepubsub.MessageHandler) error {
+func (s *Subscriber) Subscribe(ctx context.Context, handler pubsub.MessageHandler) error {
 	s.mu.Lock()
 	if s.isSubscribed {
 		s.mu.Unlock()
@@ -85,7 +86,7 @@ func (s *Subscriber) Subscribe(ctx context.Context, handler basepubsub.MessageHa
 	s.mu.Unlock()
 
 	// Start receiving messages
-	return s.subscription.Receive(ctx, func(ctx context.Context, msg *pubsub.Message) {
+	return s.subscription.Receive(ctx, func(ctx context.Context, msg *gps.Message) {
 		// Create metadata for the message
 		metadata := map[string]any{
 			"publishTime":     msg.PublishTime,
@@ -94,7 +95,7 @@ func (s *Subscriber) Subscribe(ctx context.Context, handler basepubsub.MessageHa
 		}
 
 		// Create a message that implements the MessageAcker interface
-		message := NewMessage(msg, basepubsub.WithMetadata(metadata))
+		message := NewMessage(msg, pubsub.WithMetadata(metadata))
 
 		// Process the message with the provided handler
 		err := handler(ctx, message)
@@ -123,7 +124,7 @@ func (s *Subscriber) Close() error {
 }
 
 // subClientConfig creates a subscriber client config with retry settings
-func subClientConfig(retry *basepubsub.Retry) *pubsub.ClientConfig {
+func subClientConfig(retry *pubsub.Retry) *gps.ClientConfig {
 	// TODO: figure out retries for different types of messages
 	// Right now these are uniformly applied to all kinds of messages
 	initialRetry := DefaultInitRetryBackoff
@@ -135,7 +136,7 @@ func subClientConfig(retry *basepubsub.Retry) *pubsub.ClientConfig {
 		maxBackoff = time.Duration(retry.MaxBackoffSeconds) * time.Second
 	}
 
-	return &pubsub.ClientConfig{
+	return &gps.ClientConfig{
 		SubscriberCallOptions: &vkit.SubscriberCallOptions{
 			Pull: []gax.CallOption{
 				gax.WithRetry(func() gax.Retryer {
