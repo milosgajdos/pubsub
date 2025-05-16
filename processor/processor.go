@@ -52,7 +52,7 @@ func New(options ...pubsub.ProcessorOption) *Processor {
 // Register adds a handler for a specific message type
 func (p *Processor) Register(msgType pubsub.MessageType, handler pubsub.MessageHandler) error {
 	if string(msgType) == "" {
-		return ErrInvalidMesageType
+		return ErrInvalidMessageType
 	}
 
 	if handler == nil {
