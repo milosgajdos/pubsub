@@ -9,7 +9,7 @@ import (
 	"github.com/milosgajdos/pubsub"
 )
 
-func TestNeMessage(t *testing.T) {
+func TestNewMessage(t *testing.T) {
 	mockPubsubMsg := &gps.Message{
 		ID:         "test-id",
 		Data:       []byte("test-data"),
