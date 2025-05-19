@@ -11,7 +11,7 @@ import (
 	gps "cloud.google.com/go/pubsub"
 	vkit "cloud.google.com/go/pubsub/apiv1"
 	gax "github.com/googleapis/gax-go/v2"
-	otel "go.opentelemetry.io/otel/codes"
+	otelcodes "go.opentelemetry.io/otel/codes"
 
 	"github.com/milosgajdos/pubsub"
 	"github.com/milosgajdos/pubsub/tracing"
@@ -76,7 +76,6 @@ func (p *Publisher) Publish(ctx context.Context, message pubsub.Message) (string
 	attributes := message.Attributes()
 
 	var span trace.Span
-	// Add tracing context to attributes if tracing is enabled
 	if p.tracingEnabled {
 		ctx, span = tracing.StartPublishSpan(ctx, p.topic.ID())
 		defer span.End()
@@ -93,10 +92,9 @@ func (p *Publisher) Publish(ctx context.Context, message pubsub.Message) (string
 	// Block until the result is returned and ID is assigned
 	id, err := result.Get(ctx)
 
-	// Record any errors in the span if tracing is enabled
 	if err != nil && p.tracingEnabled {
 		span.RecordError(err)
-		span.SetStatus(otel.Error, err.Error())
+		span.SetStatus(otelcodes.Error, err.Error())
 	}
 
 	return id, err
@@ -104,7 +102,6 @@ func (p *Publisher) Publish(ctx context.Context, message pubsub.Message) (string
 
 // PublishBatch publishes a batch of messages to the topic
 func (p *Publisher) PublishBatch(ctx context.Context, messages []pubsub.Message) ([]string, error) {
-	// Start a batch publish span if tracing is enabled
 	var span trace.Span
 	if p.tracingEnabled {
 		ctx, span = tracing.StartPublishSpan(ctx, p.topic.ID()+"-batch")
@@ -124,10 +121,9 @@ func (p *Publisher) PublishBatch(ctx context.Context, messages []pubsub.Message)
 	}
 
 	if lastErr != nil && len(ids) < len(messages) {
-		// Record error in span if tracing is enabled
 		if p.tracingEnabled {
 			span.RecordError(lastErr)
-			span.SetStatus(otel.Error, lastErr.Error())
+			span.SetStatus(otelcodes.Error, lastErr.Error())
 		}
 		return ids, fmt.Errorf("failed to publish some messages: %w", lastErr)
 	}

@@ -12,7 +12,7 @@ import (
 	gps "cloud.google.com/go/pubsub"
 	vkit "cloud.google.com/go/pubsub/apiv1"
 	gax "github.com/googleapis/gax-go/v2"
-	otel "go.opentelemetry.io/otel/codes"
+	otelcodes "go.opentelemetry.io/otel/codes"
 
 	"github.com/milosgajdos/pubsub"
 	"github.com/milosgajdos/pubsub/tracing"
@@ -99,7 +99,6 @@ func (s *Subscriber) Subscribe(ctx context.Context, handler pubsub.MessageHandle
 	s.isSubscribed = true
 	s.mu.Unlock()
 
-	// Start receiving messages
 	return s.subscription.Receive(ctx, func(ctx context.Context, msg *gps.Message) {
 		// Extract message type from attributes if available
 		messageType := "unknown"
@@ -119,7 +118,6 @@ func (s *Subscriber) Subscribe(ctx context.Context, handler pubsub.MessageHandle
 		message := NewMessage(msg, pubsub.WithMetadata(metadata))
 
 		var span trace.Span
-		// Extract tracing context from message attributes if tracing is enabled
 		if s.tracingEnabled {
 			ctx = tracing.ExtractTracingContext(ctx, msg.Attributes)
 			// Start a new span for message processing
@@ -135,10 +133,9 @@ func (s *Subscriber) Subscribe(ctx context.Context, handler pubsub.MessageHandle
 			// the subscription's retry policy
 			msg.Nack()
 
-			// Record error in span if tracing is enabled
 			if s.tracingEnabled {
 				span.RecordError(err)
-				span.SetStatus(otel.Error, err.Error())
+				span.SetStatus(otelcodes.Error, err.Error())
 			}
 		}
 		// If handler succeeds without error, we expect it to have called
