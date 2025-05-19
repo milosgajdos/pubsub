@@ -39,7 +39,6 @@ func TestNew(t *testing.T) {
 			t.Fatal("New() with custom extractor returned nil")
 		}
 
-		// Verify the extractor is set correctly
 		msgType, _ := p.extractor([]byte("test"))
 		if msgType != "test-type" {
 			t.Errorf("Custom extractor not set correctly")
@@ -49,22 +48,22 @@ func TestNew(t *testing.T) {
 
 func TestDefaultExtractor(t *testing.T) {
 	t.Run("ValidData", func(t *testing.T) {
-		mesgType := "test-message-type"
-		data := []byte(`{"type":"` + mesgType + `"}`)
+		msgType := "test-message-type"
+		data := []byte(`{"type":"` + msgType + `"}`)
 		extractedType, err := DefaultExtractor(data)
 		if err != nil {
 			t.Errorf("DefaultExtractor returned unexpected error: %v", err)
 		}
-		if extractedType != pubsub.MessageType(mesgType) {
-			t.Errorf("DefaultExtractor returned incorrect type: got %s, want %s", extractedType, mesgType)
+		if extractedType != pubsub.MessageType(msgType) {
+			t.Errorf("DefaultExtractor returned incorrect type: got %s, want %s", extractedType, msgType)
 		}
 	})
 
 	t.Run("InvalidJSON", func(t *testing.T) {
 		data := []byte(`{invalid json`)
 		msgType, err := DefaultExtractor(data)
-		if err != ErrUnknownMessageType {
-			t.Errorf("Expected ErrUnknownMessageType, got: %v", err)
+		if !errors.Is(err, ErrUnknownMessageType) {
+			t.Errorf("Expected %v, got: %v", ErrUnknownMessageType, err)
 		}
 		if msgType != "" {
 			t.Errorf("Expected empty message type, got: %s", msgType)
@@ -74,8 +73,8 @@ func TestDefaultExtractor(t *testing.T) {
 	t.Run("MissingTypeField", func(t *testing.T) {
 		data := []byte(`{"message":"no type field"}`)
 		msgType, err := DefaultExtractor(data)
-		if err != ErrUnknownMessageType {
-			t.Errorf("Expected ErrUnknownMessageType, got: %v", err)
+		if !errors.Is(err, ErrUnknownMessageType) {
+			t.Errorf("Expected %v, got: %v", ErrUnknownMessageType, err)
 		}
 		if msgType != "" {
 			t.Errorf("Expected empty message type, got: %s", msgType)
@@ -123,9 +122,8 @@ func TestRegister(t *testing.T) {
 	t.Run("NilHandler", func(t *testing.T) {
 		p := New()
 		err := p.Register("test-type", nil)
-
-		if err != ErrInvalidHandler {
-			t.Errorf("Expected ErrInvalidHandler, got: %v", err)
+		if !errors.Is(err, ErrInvalidHandler) {
+			t.Errorf("Expected %v, got: %v", ErrInvalidHandler, err)
 		}
 	})
 }
@@ -211,7 +209,7 @@ func TestProcess(t *testing.T) {
 
 		// Process message
 		err = p.Process(ctx, msg)
-		if err != expectedErr {
+		if !errors.Is(err, expectedErr) {
 			t.Errorf("Process returned wrong error: got %v, want %v", err, expectedErr)
 		}
 	})
