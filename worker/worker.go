@@ -61,7 +61,7 @@ func (w *Worker) Start(ctx context.Context) error {
 		w.running.Store(false)
 
 		if err != nil && ctx.Err() == nil {
-			fmt.Printf("Subscriber error: %v\n", err)
+			log.Printf("Subscriber error: %v\n", err)
 		}
 	}()
 
