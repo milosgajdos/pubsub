@@ -3,7 +3,7 @@ package worker
 import (
 	"context"
 	"errors"
-	"fmt"
+	"log"
 	"sync"
 	"sync/atomic"
 	"time"
