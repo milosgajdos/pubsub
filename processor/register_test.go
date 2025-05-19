@@ -123,7 +123,7 @@ func TestRegisterTyped(t *testing.T) {
 		// Create message data
 		eventData, err := json.Marshal(complexEvent)
 		if err != nil {
-			t.Fatalf("Failed to Marhsal event data: %v", err)
+			t.Fatalf("Failed to Marshal event data: %v", err)
 		}
 
 		// Create a mock message
