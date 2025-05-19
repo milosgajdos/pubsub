@@ -5,29 +5,31 @@ import (
 	"fmt"
 	"time"
 
-	"cloud.google.com/go/pubsub"
 	"google.golang.org/grpc/codes"
 
+	gps "cloud.google.com/go/pubsub"
 	vkit "cloud.google.com/go/pubsub/apiv1"
 	gax "github.com/googleapis/gax-go/v2"
-	basepubsub "github.com/milosgajdos/pubsub"
+
+	"github.com/milosgajdos/pubsub"
 )
 
-// Publisher implements the basepubsub.Publisher interface for Google Cloud Pub/Sub
+// Publisher implements the pubsub.Publisher interface for Google Cloud Pub/Sub
+// TODO: client and topic should be interfaces so we can write unit tests.
 type Publisher struct {
 	projectID string
-	client    *pubsub.Client
-	topic     *pubsub.Topic
-	settings  *pubsub.PublishSettings
+	client    *gps.Client
+	topic     *gps.Topic
+	settings  *gps.PublishSettings
 }
 
 // NewPublisher creates a new Google Cloud Pub/Sub publisher
-func NewPublisher(ctx context.Context, projectID string, options ...basepubsub.PubOption) (*Publisher, error) {
+func NewPublisher(ctx context.Context, projectID string, options ...pubsub.PubOption) (*Publisher, error) {
 	if projectID == "" {
 		return nil, ErrInvalidProject
 	}
 
-	opts := &basepubsub.PubOptions{}
+	opts := &pubsub.PubOptions{}
 	for _, option := range options {
 		option(opts)
 	}
@@ -38,7 +40,7 @@ func NewPublisher(ctx context.Context, projectID string, options ...basepubsub.P
 
 	// Create a client with the retry configuration
 	clientConfig := pubClientConfig(opts.Retry)
-	client, err := pubsub.NewClientWithConfig(ctx, projectID, clientConfig)
+	client, err := gps.NewClientWithConfig(ctx, projectID, clientConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create publisher pubsub client: %w", err)
 	}
@@ -47,7 +49,7 @@ func NewPublisher(ctx context.Context, projectID string, options ...basepubsub.P
 	topic := client.Topic(opts.Topic)
 
 	// Configure topic settings based on options
-	publishSettings := &pubsub.PublishSettings{}
+	publishSettings := &gps.PublishSettings{}
 
 	if opts.Batch != nil {
 		publishSettings.CountThreshold = opts.Batch.Size
@@ -64,8 +66,8 @@ func NewPublisher(ctx context.Context, projectID string, options ...basepubsub.P
 }
 
 // Publish publishes a message to the topic
-func (p *Publisher) Publish(ctx context.Context, message basepubsub.Message) (string, error) {
-	result := p.topic.Publish(ctx, &pubsub.Message{
+func (p *Publisher) Publish(ctx context.Context, message pubsub.Message) (string, error) {
+	result := p.topic.Publish(ctx, &gps.Message{
 		Data:       message.Data(),
 		Attributes: message.Attributes(),
 	})
@@ -75,7 +77,7 @@ func (p *Publisher) Publish(ctx context.Context, message basepubsub.Message) (st
 }
 
 // PublishBatch publishes a batch of messages to the topic
-func (p *Publisher) PublishBatch(ctx context.Context, messages []basepubsub.Message) ([]string, error) {
+func (p *Publisher) PublishBatch(ctx context.Context, messages []pubsub.Message) ([]string, error) {
 	ids := make([]string, 0, len(messages))
 	var lastErr error
 
@@ -102,7 +104,7 @@ func (p *Publisher) Close() error {
 }
 
 // pubClientConfig creates a publisher client config with retry settings
-func pubClientConfig(retry *basepubsub.Retry) *pubsub.ClientConfig {
+func pubClientConfig(retry *pubsub.Retry) *gps.ClientConfig {
 	initialRetry := DefaultInitRetryBackoff
 	if retry != nil {
 		initialRetry = time.Duration(retry.InitBackoffSeconds) * time.Second
@@ -112,7 +114,7 @@ func pubClientConfig(retry *basepubsub.Retry) *pubsub.ClientConfig {
 		maxBackoff = time.Duration(retry.MaxBackoffSeconds) * time.Second
 	}
 
-	return &pubsub.ClientConfig{
+	return &gps.ClientConfig{
 		PublisherCallOptions: &vkit.PublisherCallOptions{
 			Publish: []gax.CallOption{
 				gax.WithRetry(func() gax.Retryer {

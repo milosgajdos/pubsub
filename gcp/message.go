@@ -1,20 +1,20 @@
 package gcp
 
 import (
-	"cloud.google.com/go/pubsub"
+	gps "cloud.google.com/go/pubsub"
 
-	basepubsub "github.com/milosgajdos/pubsub"
+	"github.com/milosgajdos/pubsub"
 )
 
 // Message implements the pubsub.MessageAcker interface for GCP Cloud Pub/Sub
 type Message struct {
-	msg      *pubsub.Message
+	msg      *gps.Message
 	metadata map[string]any
 }
 
 // NewMessage creates a new message from a Google Cloud Pub/Sub message
-func NewMessage(msg *pubsub.Message, options ...basepubsub.MessageOption) *Message {
-	opts := &basepubsub.MessageOptions{}
+func NewMessage(msg *gps.Message, options ...pubsub.MessageOption) *Message {
+	opts := &pubsub.MessageOptions{}
 	for _, option := range options {
 		option(opts)
 	}

@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"cloud.google.com/go/pubsub"
 	"github.com/google/uuid"
 
-	basepubsub "github.com/milosgajdos/pubsub"
+	gps "cloud.google.com/go/pubsub"
 
+	"github.com/milosgajdos/pubsub"
 	"github.com/milosgajdos/pubsub/gcp"
 )
 
@@ -31,8 +31,8 @@ func TestPublisherIntegration(t *testing.T) {
 	publisher, err := gcp.NewPublisher(
 		ctx,
 		gcp.TestProjectID,
-		basepubsub.WithTopic(pubTopicID),
-		basepubsub.WithBatch(basepubsub.Batch{Size: 10}),
+		pubsub.WithTopic(pubTopicID),
+		pubsub.WithBatch(pubsub.Batch{Size: 10}),
 	)
 	if err != nil {
 		t.Fatalf("Failed to create publisher: %v", err)
@@ -42,12 +42,12 @@ func TestPublisherIntegration(t *testing.T) {
 	// Define common variables for both subtests
 	numMessages := 5
 	var receivedMutex sync.Mutex
-	receivedMessages := make([]*pubsub.Message, 0, numMessages*2)
+	receivedMessages := make([]*gps.Message, 0, numMessages*2)
 
 	// Receive message setup
-	receiveMessages := func(timeout time.Duration) []*pubsub.Message {
+	receiveMessages := func(timeout time.Duration) []*gps.Message {
 		receivedMutex.Lock()
-		receivedMessages = make([]*pubsub.Message, 0, numMessages*2)
+		receivedMessages = make([]*gps.Message, 0, numMessages*2)
 		receivedMutex.Unlock()
 
 		receiveCtx, receiveCancel := context.WithTimeout(ctx, timeout)
@@ -55,7 +55,7 @@ func TestPublisherIntegration(t *testing.T) {
 
 		// Start receiving messages
 		t.Log("Starting to receive messages...")
-		err = sub.Receive(receiveCtx, func(_ context.Context, msg *pubsub.Message) {
+		err = sub.Receive(receiveCtx, func(_ context.Context, msg *gps.Message) {
 			receivedMutex.Lock()
 			receivedMessages = append(receivedMessages, msg)
 			receivedMutex.Unlock()
@@ -66,7 +66,7 @@ func TestPublisherIntegration(t *testing.T) {
 		}
 
 		receivedMutex.Lock()
-		result := make([]*pubsub.Message, len(receivedMessages))
+		result := make([]*gps.Message, len(receivedMessages))
 		copy(result, receivedMessages)
 		receivedMutex.Unlock()
 
@@ -79,7 +79,7 @@ func TestPublisherIntegration(t *testing.T) {
 
 		// Publish messages individually
 		for i := range numMessages {
-			pubsubMsg := &pubsub.Message{
+			pubsubMsg := &gps.Message{
 				Data: fmt.Appendf(nil, "test-publish-message-%d", i),
 				Attributes: map[string]string{
 					"publisher-test": "true",
@@ -121,9 +121,9 @@ func TestPublisherIntegration(t *testing.T) {
 	// Run batch publishing subtest
 	t.Run("BatchPublish", func(t *testing.T) {
 		// Prepare batch messages
-		batchMessages := make([]basepubsub.Message, numMessages)
+		batchMessages := make([]pubsub.Message, numMessages)
 		for i := range numMessages {
-			pubsubMsg := &pubsub.Message{
+			pubsubMsg := &gps.Message{
 				Data: fmt.Appendf(nil, "test-batch-message-%d", i),
 				Attributes: map[string]string{
 					"batch-test": "true",

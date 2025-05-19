@@ -4,14 +4,14 @@ import (
 	"context"
 	"testing"
 
-	basepubsub "github.com/milosgajdos/pubsub"
+	"github.com/milosgajdos/pubsub"
 )
 
 func TestNewSubscriber(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("invalid project ID", func(t *testing.T) {
-		_, err := NewSubscriber(ctx, "", basepubsub.WithSub("test-subscription"))
+		_, err := NewSubscriber(ctx, "", pubsub.WithSub("test-subscription"))
 		if err != ErrInvalidProject {
 			t.Errorf("expected %v, got %v", ErrInvalidProject, err)
 		}
@@ -32,7 +32,7 @@ func TestSubscriberAlreadySubscribed(t *testing.T) {
 	}
 
 	// Create a mock MessageHandler
-	handler := func(_ context.Context, _ basepubsub.MessageAcker) error {
+	handler := func(_ context.Context, _ pubsub.MessageAcker) error {
 		return nil
 	}
 
