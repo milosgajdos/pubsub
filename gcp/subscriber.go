@@ -6,13 +6,16 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc/codes"
 
 	gps "cloud.google.com/go/pubsub"
 	vkit "cloud.google.com/go/pubsub/apiv1"
 	gax "github.com/googleapis/gax-go/v2"
+	otel "go.opentelemetry.io/otel/codes"
 
 	"github.com/milosgajdos/pubsub"
+	"github.com/milosgajdos/pubsub/tracing"
 )
 
 // Subscriber implements the pubsub.Subscriber interface for Google Cloud Pub/Sub
@@ -23,6 +26,8 @@ type Subscriber struct {
 	client         *gps.Client
 	subscription   *gps.Subscription
 	settings       *gps.ReceiveSettings
+	tracingEnabled bool
+	topicID        string
 	mu             sync.Mutex
 }
 
@@ -65,12 +70,21 @@ func NewSubscriber(ctx context.Context, projectID string, options ...pubsub.SubO
 
 	subscription.ReceiveSettings = *receiveSettings
 
+	// Get the topic from the subscription
+	topicID := ""
+	subConfig, err := subscription.Config(ctx)
+	if err == nil && subConfig.Topic != nil {
+		topicID = subConfig.Topic.ID()
+	}
+
 	return &Subscriber{
 		projectID:      projectID,
 		subscriptionID: opts.Sub,
 		client:         client,
 		subscription:   subscription,
 		settings:       receiveSettings,
+		tracingEnabled: opts.TracingEnabled,
+		topicID:        topicID,
 	}, nil
 }
 
@@ -87,15 +101,31 @@ func (s *Subscriber) Subscribe(ctx context.Context, handler pubsub.MessageHandle
 
 	// Start receiving messages
 	return s.subscription.Receive(ctx, func(ctx context.Context, msg *gps.Message) {
+		// Extract message type from attributes if available
+		messageType := "unknown"
+		if msgType, ok := msg.Attributes["message_type"]; ok {
+			messageType = msgType
+		}
+
 		// Create metadata for the message
 		metadata := map[string]any{
 			"publishTime":     msg.PublishTime,
 			"deliveryAttempt": msg.DeliveryAttempt,
 			"orderingKey":     msg.OrderingKey,
+			"messageType":     messageType,
 		}
 
 		// Create a message that implements the MessageAcker interface
 		message := NewMessage(msg, pubsub.WithMetadata(metadata))
+
+		// Extract tracing context from message attributes if tracing is enabled
+		if s.tracingEnabled {
+			ctx = tracing.ExtractTracingContext(ctx, msg.Attributes)
+			// Start a new span for message processing
+			var span trace.Span
+			ctx, span = tracing.StartMessageProcessingSpan(ctx, message.ID(), s.topicID, s.subscriptionID, messageType)
+			defer span.End()
+		}
 
 		// Process the message with the provided handler
 		err := handler(ctx, message)
@@ -104,6 +134,13 @@ func (s *Subscriber) Subscribe(ctx context.Context, handler pubsub.MessageHandle
 			// This will cause the message to be redelivered according to
 			// the subscription's retry policy
 			msg.Nack()
+
+			// Record error in span if tracing is enabled
+			if s.tracingEnabled {
+				span := trace.SpanFromContext(ctx)
+				span.RecordError(err)
+				span.SetStatus(otel.Error, err.Error())
+			}
 		}
 		// If handler succeeds without error, we expect it to have called
 		// message.Ack() explicitly. If it didn't, the message will be redelivered

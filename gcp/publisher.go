@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc/codes"
 
 	gps "cloud.google.com/go/pubsub"
@@ -12,15 +13,17 @@ import (
 	gax "github.com/googleapis/gax-go/v2"
 
 	"github.com/milosgajdos/pubsub"
+	"github.com/milosgajdos/pubsub/tracing"
 )
 
 // Publisher implements the pubsub.Publisher interface for Google Cloud Pub/Sub
 // TODO: client and topic should be interfaces so we can write unit tests.
 type Publisher struct {
-	projectID string
-	client    *gps.Client
-	topic     *gps.Topic
-	settings  *gps.PublishSettings
+	projectID      string
+	client         *gps.Client
+	topic          *gps.Topic
+	settings       *gps.PublishSettings
+	tracingEnabled bool
 }
 
 // NewPublisher creates a new Google Cloud Pub/Sub publisher
@@ -58,26 +61,55 @@ func NewPublisher(ctx context.Context, projectID string, options ...pubsub.PubOp
 	topic.PublishSettings = *publishSettings
 
 	return &Publisher{
-		projectID: projectID,
-		client:    client,
-		topic:     topic,
-		settings:  publishSettings,
+		projectID:      projectID,
+		client:         client,
+		topic:          topic,
+		settings:       publishSettings,
+		tracingEnabled: opts.TracingEnabled,
 	}, nil
 }
 
 // Publish publishes a message to the topic
 func (p *Publisher) Publish(ctx context.Context, message pubsub.Message) (string, error) {
+	// Create message attributes
+	attributes := message.Attributes()
+
+	// Add tracing context to attributes if tracing is enabled
+	if p.tracingEnabled {
+		var span trace.Span
+		ctx, span = tracing.StartPublishSpan(ctx, p.topic.ID())
+		defer span.End()
+
+		// Inject tracing context into message attributes
+		attributes = tracing.InjectTracingContext(ctx, attributes)
+	}
+
 	result := p.topic.Publish(ctx, &gps.Message{
 		Data:       message.Data(),
-		Attributes: message.Attributes(),
+		Attributes: attributes,
 	})
 
 	// Block until the result is returned and ID is assigned
-	return result.Get(ctx)
+	id, err := result.Get(ctx)
+
+	// Record any errors in the span if tracing is enabled
+	if err != nil && p.tracingEnabled {
+		span := trace.SpanFromContext(ctx)
+		span.RecordError(err)
+	}
+
+	return id, err
 }
 
 // PublishBatch publishes a batch of messages to the topic
 func (p *Publisher) PublishBatch(ctx context.Context, messages []pubsub.Message) ([]string, error) {
+	// Start a batch publish span if tracing is enabled
+	if p.tracingEnabled {
+		var span trace.Span
+		ctx, span = tracing.StartPublishSpan(ctx, p.topic.ID()+"-batch")
+		defer span.End()
+	}
+
 	ids := make([]string, 0, len(messages))
 	var lastErr error
 
@@ -91,6 +123,11 @@ func (p *Publisher) PublishBatch(ctx context.Context, messages []pubsub.Message)
 	}
 
 	if lastErr != nil && len(ids) < len(messages) {
+		// Record error in span if tracing is enabled
+		if p.tracingEnabled {
+			span := trace.SpanFromContext(ctx)
+			span.RecordError(lastErr)
+		}
 		return ids, fmt.Errorf("failed to publish some messages: %w", lastErr)
 	}
 
