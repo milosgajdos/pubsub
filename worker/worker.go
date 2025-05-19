@@ -16,10 +16,10 @@ import (
 type Worker struct {
 	subscriber pubsub.Subscriber
 	processor  pubsub.MessageProcessor
-	running    atomic.Bool // Using atomic.Bool for thread-safe access
+	running    atomic.Bool
 	cancelFunc context.CancelFunc
 	wg         sync.WaitGroup
-	mu         sync.Mutex // Still needed for cancelFunc access
+	mu         sync.Mutex
 }
 
 // New creates a new worker
@@ -40,18 +40,15 @@ func New(subscriber pubsub.Subscriber, processor pubsub.MessageProcessor) (*Work
 
 // Start begins processing messages
 func (w *Worker) Start(ctx context.Context) error {
-	// Atomically check and set running flag
 	if !w.running.CompareAndSwap(false, true) {
 		return ErrWorkerRunning
 	}
 
 	w.mu.Lock()
-	// Create a cancellable context
 	ctx, cancel := context.WithCancel(ctx)
 	w.cancelFunc = cancel
 	w.mu.Unlock()
 
-	// Start processing in background
 	w.wg.Add(1)
 	go func() {
 		defer w.wg.Done()
@@ -73,7 +70,6 @@ func (w *Worker) Start(ctx context.Context) error {
 
 // Stop gracefully shuts down the worker
 func (w *Worker) Stop(timeout time.Duration) error {
-	// First check if we're running
 	if !w.running.Load() {
 		return ErrWorkerNotRunning
 	}

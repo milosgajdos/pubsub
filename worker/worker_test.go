@@ -36,8 +36,8 @@ func TestNew(t *testing.T) {
 		processor := &MockProcessor{}
 
 		worker, err := New(nil, processor)
-		if err != ErrNilSubscriber {
-			t.Errorf("Expected ErrNilSubscriber, got: %v", err)
+		if !errors.Is(err, ErrNilSubscriber) {
+			t.Errorf("Expected %v, got: %v", ErrNilSubscriber, err)
 		}
 
 		if worker != nil {
@@ -49,8 +49,8 @@ func TestNew(t *testing.T) {
 		subscriber := &MockSubscriber{}
 
 		worker, err := New(subscriber, nil)
-		if err != ErrNilProcessor {
-			t.Errorf("Expected ErrNilProcessor, got: %v", err)
+		if errors.Is(err, ErrNilProcessor) {
+			t.Errorf("Expected %v, got: %v", ErrNilProcessor, err)
 		}
 
 		if worker != nil {
@@ -229,25 +229,20 @@ func TestWorkerStop(t *testing.T) {
 
 func TestMessageProcessing(t *testing.T) {
 	t.Run("MessageToProcessor", func(t *testing.T) {
-		// Create a subscriber that delivers a message to the handler
 		subscriber := &MockSubscriber{
 			SubscribeFn: func(ctx context.Context, handler pubsub.MessageHandler) error {
-				// Create a test message
 				msg := NewMockMessage("test-id", []byte("test-data"))
-
-				// Call the handler with the message
 				_ = handler(ctx, msg)
-
 				// Wait until context is cancelled
 				<-ctx.Done()
 				return ctx.Err()
 			},
 		}
 
-		// Track if Process was called
 		processCalled := false
 		processor := &MockProcessor{
 			ProcessFn: func(_ context.Context, msg pubsub.MessageAcker) error {
+				// Track if Process was called
 				processCalled = true
 				msg.Ack()
 				return nil
