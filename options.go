@@ -8,6 +8,8 @@ type PubOptions struct {
 	Batch *Batch
 	// Retry configures retry settings
 	Retry *Retry
+	// TracingEnabled enables OpenTelemetry tracing
+	TracingEnabled bool
 }
 
 // PubOption is used for configuring publishers
@@ -40,6 +42,13 @@ func WithPubRetry(retry Retry) PubOption {
 	}
 }
 
+// WithPubTracing enables OpenTelemetry tracing for publishers
+func WithPubTracing() PubOption {
+	return func(o *PubOptions) {
+		o.TracingEnabled = true
+	}
+}
+
 // Retry is used for retry settings
 type Retry struct {
 	// InitBackoffSeconds is initial backoff in seconds
@@ -56,6 +65,8 @@ type SubOptions struct {
 	Retry *Retry
 	// Concurrency configures concurrency settings
 	Concurrency int
+	// TracingEnabled enables OpenTelemetry tracing
+	TracingEnabled bool
 }
 
 // SubOption is used for configuring subscribers
@@ -79,6 +90,13 @@ func WithSubRetry(retry Retry) SubOption {
 func WithConcurrency(concurrency int) SubOption {
 	return func(o *SubOptions) {
 		o.Concurrency = concurrency
+	}
+}
+
+// WithSubTracing enables OpenTelemetry tracing for subscribers
+func WithSubTracing() SubOption {
+	return func(o *SubOptions) {
+		o.TracingEnabled = true
 	}
 }
 
