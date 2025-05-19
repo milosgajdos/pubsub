@@ -49,7 +49,7 @@ func TestNew(t *testing.T) {
 		subscriber := &MockSubscriber{}
 
 		worker, err := New(subscriber, nil)
-		if errors.Is(err, ErrNilProcessor) {
+		if !errors.Is(err, ErrNilProcessor) {
 			t.Errorf("Expected %v, got: %v", ErrNilProcessor, err)
 		}
 
@@ -61,10 +61,11 @@ func TestNew(t *testing.T) {
 
 func TestWorkerStart(t *testing.T) {
 	t.Run("SuccessfulStart", func(t *testing.T) {
-		subscribeCalled := false
+		subscribeCalled := make(chan struct{})
 		subscriber := &MockSubscriber{
 			SubscribeFn: func(ctx context.Context, _ pubsub.MessageHandler) error {
-				subscribeCalled = true
+				// Signal that Subscribe was called
+				close(subscribeCalled)
 				// Keep subscriber running until context is cancelled
 				<-ctx.Done()
 				return ctx.Err()
@@ -86,11 +87,12 @@ func TestWorkerStart(t *testing.T) {
 			t.Errorf("Start() returned unexpected error: %v", err)
 		}
 
-		// Give goroutine time to start
-		time.Sleep(50 * time.Millisecond)
-
-		if !subscribeCalled {
-			t.Error("Subscribe should have been called")
+		// Wait for Subscribe to be called
+		select {
+		case <-subscribeCalled:
+			// Subscribe was called, continue
+		case <-time.After(time.Second):
+			t.Fatal("Timed out waiting for Subscribe to be called")
 		}
 
 		if !worker.IsRunning() {
@@ -143,8 +145,10 @@ func TestWorkerStart(t *testing.T) {
 
 	t.Run("SubscribeError", func(t *testing.T) {
 		expectedErr := errors.New("subscribe error")
+		errorReturned := make(chan struct{})
 		subscriber := &MockSubscriber{
 			SubscribeFn: func(context.Context, pubsub.MessageHandler) error {
+				defer close(errorReturned)
 				return expectedErr
 			},
 		}
@@ -161,8 +165,13 @@ func TestWorkerStart(t *testing.T) {
 			t.Errorf("Start() returned unexpected error: %v", err)
 		}
 
-		// Give goroutine time to run and fail
-		time.Sleep(50 * time.Millisecond)
+		// Wait for subscription to fail
+		select {
+		case <-errorReturned:
+			// Error was returned, continue
+		case <-time.After(time.Second):
+			t.Fatal("Timed out waiting for Subscribe to return error")
+		}
 
 		if worker.IsRunning() {
 			t.Error("Worker should not be running after Subscribe fails")
@@ -172,10 +181,10 @@ func TestWorkerStart(t *testing.T) {
 
 func TestWorkerStop(t *testing.T) {
 	t.Run("SuccessfulStop", func(t *testing.T) {
-		subscribeCalled := false
+		subscribeCalled := make(chan struct{})
 		subscriber := &MockSubscriber{
 			SubscribeFn: func(ctx context.Context, _ pubsub.MessageHandler) error {
-				subscribeCalled = true
+				close(subscribeCalled)
 				// Keep subscriber running until context is cancelled
 				<-ctx.Done()
 				return ctx.Err()
@@ -194,11 +203,12 @@ func TestWorkerStop(t *testing.T) {
 			t.Errorf("Start() returned unexpected error: %v", err)
 		}
 
-		// Give goroutine time to start
-		time.Sleep(50 * time.Millisecond)
-
-		if !subscribeCalled {
-			t.Error("Subscribe should have been called")
+		// Wait for Subscribe to be called
+		select {
+		case <-subscribeCalled:
+			// Subscribe was called, continue
+		case <-time.After(time.Second):
+			t.Fatal("Timed out waiting for Subscribe to be called")
 		}
 
 		err = worker.Stop(100 * time.Millisecond)
@@ -229,21 +239,26 @@ func TestWorkerStop(t *testing.T) {
 
 func TestMessageProcessing(t *testing.T) {
 	t.Run("MessageToProcessor", func(t *testing.T) {
+		processCalled := make(chan struct{})
+		handlerCalled := make(chan struct{})
+
+		// Create a subscriber that delivers a message to the handler
 		subscriber := &MockSubscriber{
 			SubscribeFn: func(ctx context.Context, handler pubsub.MessageHandler) error {
 				msg := NewMockMessage("test-id", []byte("test-data"))
+				// Call the handler with the message
 				_ = handler(ctx, msg)
+				close(handlerCalled)
 				// Wait until context is cancelled
 				<-ctx.Done()
 				return ctx.Err()
 			},
 		}
 
-		processCalled := false
+		// Track if Process was called
 		processor := &MockProcessor{
 			ProcessFn: func(_ context.Context, msg pubsub.MessageAcker) error {
-				// Track if Process was called
-				processCalled = true
+				close(processCalled)
 				msg.Ack()
 				return nil
 			},
@@ -262,12 +277,20 @@ func TestMessageProcessing(t *testing.T) {
 			t.Errorf("Start() returned unexpected error: %v", err)
 		}
 
-		// Give some time for the handler to be called
-		time.Sleep(50 * time.Millisecond)
+		// Wait for processor to be called
+		select {
+		case <-processCalled:
+			// Process was called, continue
+		case <-time.After(time.Second):
+			t.Fatal("Timed out waiting for Process to be called")
+		}
 
-		// Verify processor was called
-		if !processCalled {
-			t.Error("Process should have been called")
+		// Verify handler was called
+		select {
+		case <-handlerCalled:
+			// Handler was called, continue
+		case <-time.After(time.Second):
+			t.Fatal("Timed out waiting for handler to be called")
 		}
 
 		// Clean up
