@@ -39,7 +39,7 @@ func TestMessage(t *testing.T) {
 		msg := &Message{msg: mockPubsubMsg}
 
 		if id := msg.ID(); id != expectedID {
-			t.Errorf("ID() = %v, ant %v", id, expectedID)
+			t.Errorf("ID() = %v, want %v", id, expectedID)
 		}
 	})
 
@@ -77,7 +77,6 @@ func TestMessage(t *testing.T) {
 		})
 
 		t.Run("NilMetadata", func(t *testing.T) {
-			// Test ith nil metadata (should initialize a new map)
 			msg := &Message{metadata: nil}
 			metadata := msg.Metadata()
 
