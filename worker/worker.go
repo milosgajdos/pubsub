@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/milosgajdos/pubsub"
@@ -15,10 +16,10 @@ import (
 type Worker struct {
 	subscriber pubsub.Subscriber
 	processor  pubsub.MessageProcessor
-	running    bool // TODO: consider using atomic
+	running    atomic.Bool // Using atomic.Bool for thread-safe access
 	cancelFunc context.CancelFunc
 	wg         sync.WaitGroup
-	mu         sync.Mutex
+	mu         sync.Mutex // Still needed for cancelFunc access
 }
 
 // New creates a new worker
@@ -39,19 +40,16 @@ func New(subscriber pubsub.Subscriber, processor pubsub.MessageProcessor) (*Work
 
 // Start begins processing messages
 func (w *Worker) Start(ctx context.Context) error {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-
-	if w.running {
+	// Atomically check and set running flag
+	if !w.running.CompareAndSwap(false, true) {
 		return ErrWorkerRunning
 	}
 
+	w.mu.Lock()
 	// Create a cancellable context
 	ctx, cancel := context.WithCancel(ctx)
 	w.cancelFunc = cancel
-
-	// Mark as running
-	w.running = true
+	w.mu.Unlock()
 
 	// Start processing in background
 	w.wg.Add(1)
@@ -63,9 +61,7 @@ func (w *Worker) Start(ctx context.Context) error {
 		})
 
 		// When Subscribe returns, mark as not running
-		w.mu.Lock()
-		w.running = false
-		w.mu.Unlock()
+		w.running.Store(false)
 
 		if err != nil && ctx.Err() == nil {
 			fmt.Printf("Subscriber error: %v\n", err)
@@ -77,8 +73,13 @@ func (w *Worker) Start(ctx context.Context) error {
 
 // Stop gracefully shuts down the worker
 func (w *Worker) Stop(timeout time.Duration) error {
+	// First check if we're running
+	if !w.running.Load() {
+		return ErrWorkerNotRunning
+	}
+
 	w.mu.Lock()
-	if !w.running || w.cancelFunc == nil {
+	if w.cancelFunc == nil {
 		w.mu.Unlock()
 		return ErrWorkerNotRunning
 	}
@@ -107,7 +108,5 @@ func (w *Worker) Stop(timeout time.Duration) error {
 
 // IsRunning returns whether the worker is currently running
 func (w *Worker) IsRunning() bool {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	return w.running
+	return w.running.Load()
 }
