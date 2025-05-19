@@ -11,6 +11,7 @@ import (
 	gps "cloud.google.com/go/pubsub"
 	vkit "cloud.google.com/go/pubsub/apiv1"
 	gax "github.com/googleapis/gax-go/v2"
+	otel "go.opentelemetry.io/otel/codes"
 
 	"github.com/milosgajdos/pubsub"
 	"github.com/milosgajdos/pubsub/tracing"
@@ -95,6 +96,7 @@ func (p *Publisher) Publish(ctx context.Context, message pubsub.Message) (string
 	// Record any errors in the span if tracing is enabled
 	if err != nil && p.tracingEnabled {
 		span.RecordError(err)
+		span.SetStatus(otel.Error, err.Error())
 	}
 
 	return id, err
@@ -125,6 +127,7 @@ func (p *Publisher) PublishBatch(ctx context.Context, messages []pubsub.Message)
 		// Record error in span if tracing is enabled
 		if p.tracingEnabled {
 			span.RecordError(lastErr)
+			span.SetStatus(otel.Error, lastErr.Error())
 		}
 		return ids, fmt.Errorf("failed to publish some messages: %w", lastErr)
 	}
