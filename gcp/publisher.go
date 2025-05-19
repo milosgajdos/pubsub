@@ -74,9 +74,9 @@ func (p *Publisher) Publish(ctx context.Context, message pubsub.Message) (string
 	// Create message attributes
 	attributes := message.Attributes()
 
+	var span trace.Span
 	// Add tracing context to attributes if tracing is enabled
 	if p.tracingEnabled {
-		var span trace.Span
 		ctx, span = tracing.StartPublishSpan(ctx, p.topic.ID())
 		defer span.End()
 
@@ -94,7 +94,6 @@ func (p *Publisher) Publish(ctx context.Context, message pubsub.Message) (string
 
 	// Record any errors in the span if tracing is enabled
 	if err != nil && p.tracingEnabled {
-		span := trace.SpanFromContext(ctx)
 		span.RecordError(err)
 	}
 
@@ -104,8 +103,8 @@ func (p *Publisher) Publish(ctx context.Context, message pubsub.Message) (string
 // PublishBatch publishes a batch of messages to the topic
 func (p *Publisher) PublishBatch(ctx context.Context, messages []pubsub.Message) ([]string, error) {
 	// Start a batch publish span if tracing is enabled
+	var span trace.Span
 	if p.tracingEnabled {
-		var span trace.Span
 		ctx, span = tracing.StartPublishSpan(ctx, p.topic.ID()+"-batch")
 		defer span.End()
 	}
@@ -125,7 +124,6 @@ func (p *Publisher) PublishBatch(ctx context.Context, messages []pubsub.Message)
 	if lastErr != nil && len(ids) < len(messages) {
 		// Record error in span if tracing is enabled
 		if p.tracingEnabled {
-			span := trace.SpanFromContext(ctx)
 			span.RecordError(lastErr)
 		}
 		return ids, fmt.Errorf("failed to publish some messages: %w", lastErr)

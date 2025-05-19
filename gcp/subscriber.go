@@ -118,11 +118,11 @@ func (s *Subscriber) Subscribe(ctx context.Context, handler pubsub.MessageHandle
 		// Create a message that implements the MessageAcker interface
 		message := NewMessage(msg, pubsub.WithMetadata(metadata))
 
+		var span trace.Span
 		// Extract tracing context from message attributes if tracing is enabled
 		if s.tracingEnabled {
 			ctx = tracing.ExtractTracingContext(ctx, msg.Attributes)
 			// Start a new span for message processing
-			var span trace.Span
 			ctx, span = tracing.StartMessageProcessingSpan(ctx, message.ID(), s.topicID, s.subscriptionID, messageType)
 			defer span.End()
 		}
@@ -137,7 +137,6 @@ func (s *Subscriber) Subscribe(ctx context.Context, handler pubsub.MessageHandle
 
 			// Record error in span if tracing is enabled
 			if s.tracingEnabled {
-				span := trace.SpanFromContext(ctx)
 				span.RecordError(err)
 				span.SetStatus(otel.Error, err.Error())
 			}
